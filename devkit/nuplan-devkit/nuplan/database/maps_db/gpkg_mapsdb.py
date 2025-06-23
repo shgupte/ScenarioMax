@@ -1,4 +1,5 @@
-import fcntl
+# import fcntl
+import msvcrt
 import glob
 import json
 import logging
@@ -227,13 +228,21 @@ class GPKGMapsDB(IMapsDB):
         :param layer_lock_file: Path to lock file.
         :param file_path: Path of the file being downloaded.
         """
-        fd = open(layer_lock_file, 'w')
+        # fd = open(layer_lock_file, 'w')
+        # try:
+        #     fcntl.flock(fd, fcntl.LOCK_EX)
+        #     _ = self._blob_store.save_to_disk(file_path, check_for_compressed=True)
+        # finally:
+        #     fcntl.flock(fd, fcntl.LOCK_UN)
+        #     fd.close()
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX)
+    # Open the file in binary mode for msvcrt.locking
+            fd = os.open(file_path, os.O_WRONLY | os.O_CREAT)
+            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1) # Lock the first byte
             _ = self._blob_store.save_to_disk(file_path, check_for_compressed=True)
         finally:
-            fcntl.flock(fd, fcntl.LOCK_UN)
-            fd.close()
+            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+            os.close(fd)
 
     # The size of the cache was derived from testing with the Raster Model
     #   on our cluster to balance memory usage and performance.
